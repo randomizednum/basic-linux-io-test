@@ -24,8 +24,18 @@ static inline void fail(const char *msg) {
 	exit(1);
 }
 
-int main(void) {
-	int mice = open("/dev/input/mice", O_RDONLY);
+int main(int argc, char **argv) {
+	char const *mouse_path = "/dev/input/mice";
+	long snd_card_num = 0, snd_dev_num = 0;
+	for (int i = 1; i < argc - 1; ++i) {
+		char *arg = argv[i];
+		if (strcmp(arg, "--mouse") == 0) mouse_path = argv[++i];
+		else if (strcmp(arg, "--snd-card") == 0) snd_card_num = strtol(argv[++i], NULL, 10);
+		else if (strcmp(arg, "--snd-device") == 0) snd_dev_num = strtol(argv[++i], NULL, 10);
+		else fail("invalid arguments");
+	}
+
+	int mice = open(mouse_path, O_RDONLY);
 	if (mice == -1) fail("couldn't open mouse device");
 
 	int mice_oldf = fcntl(mice, F_GETFL);
@@ -34,7 +44,7 @@ int main(void) {
 	if (fcntl(mice, F_SETFL, mice_oldf | O_NONBLOCK) == -1) fail("couldn't set file flags of mouse device");
 
 
-	int audfd = audio_init(0, 0, O_NONBLOCK);
+	int audfd = audio_init(snd_card_num, snd_dev_num, O_NONBLOCK);
 	if (audfd == -1) fail("couldn't open audio device");
 
 	double notes1[] = { G, REST, D  , Eb, F, REST, Eb, D  , C  , REST, C  , Eb, G , REST, F, Eb, D  , REST, D  , Eb, F, REST, G   , REST, Eb, REST, C  , REST, C   };
