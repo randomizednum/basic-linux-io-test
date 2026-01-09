@@ -15,10 +15,12 @@
 int audio_init(unsigned int card, unsigned int device, int flags);
 int audio_render(int fd, int16_t *buf, long nframes);
 
+//this thing is getting messy, TODO
 struct audio_context {
 	int fd;
 	long nframes_left;
 	unsigned long max_playback;
+	int16_t *return_back;
 	int16_t *buf;
 };
 
@@ -26,7 +28,14 @@ struct audio_context {
 static inline void audio_play_context(struct audio_context *context) {
 	long frames = context->nframes_left;
 	unsigned long max_pb = context->max_playback;
-	if (frames <= 0) return;
+	if (frames <= 0) {
+		if (context->return_back) {
+			context->nframes_left = (context->buf - context->return_back) / 2;
+			context->buf = context->return_back;
+			audio_play_context(context);
+		}
+		return;
+	}
 
 	long pb_frames = (frames > max_pb) ? max_pb : frames;
 

@@ -18,6 +18,7 @@
 #include "audio.h"
 #include "piece.h"
 #include "framebuf.h"
+#include "kb.h"
 
 static inline void fail(const char *msg) {
 	fprintf(stderr, "%s: %d\n", msg, errno);
@@ -26,14 +27,20 @@ static inline void fail(const char *msg) {
 
 int main(int argc, char **argv) {
 	char const *mouse_path = "/dev/input/mice";
+	char const *kb_path = "/dev/input/event0";
 	long snd_card_num = 0, snd_dev_num = 0;
 	for (int i = 1; i < argc - 1; ++i) {
 		char *arg = argv[i];
 		if (strcmp(arg, "--mouse") == 0) mouse_path = argv[++i];
 		else if (strcmp(arg, "--snd-card") == 0) snd_card_num = strtol(argv[++i], NULL, 10);
 		else if (strcmp(arg, "--snd-device") == 0) snd_dev_num = strtol(argv[++i], NULL, 10);
+		else if (strcmp(arg, "--kb-path") == 0) kb_path = argv[++i];
 		else fail("invalid arguments");
 	}
+
+	//             \\
+	// Mouse setup \\
+	//             \\
 
 	int mice = open(mouse_path, O_RDONLY);
 	if (mice == -1) fail("couldn't open mouse device");
@@ -43,6 +50,9 @@ int main(int argc, char **argv) {
 
 	if (fcntl(mice, F_SETFL, mice_oldf | O_NONBLOCK) == -1) fail("couldn't set file flags of mouse device");
 
+	//             \\
+	// Sound setup \\
+	//             \\
 
 	int audfd = audio_init(snd_card_num, snd_dev_num, O_NONBLOCK);
 	if (audfd == -1) fail("couldn't open audio device");
@@ -62,9 +72,13 @@ int main(int argc, char **argv) {
 		.fd = audfd,
 		.nframes_left = GET_PIECE_BUF_FRAMES(sz, spn),
 		.max_playback = 16384, //at most 16384 frames at a time
+		.return_back = NULL, //no replay
 		.buf = pbbuf
 	};
 
+	//                   \\
+	// Framebuffer setup \\
+	//                   \\
 
 	int fbfd = open("/dev/fb0", O_RDWR);
 	if (fbfd == -1) fail("couldn't open fb0");
@@ -88,10 +102,61 @@ int main(int argc, char **argv) {
 	unsigned char *fbmem = mmap(NULL, fixscinfo.smem_len, PROT_WRITE, MAP_SHARED, fbfd, 0);
 	unsigned char *tmpbuf = malloc(fixscinfo.smem_len);
 
+	//                \\
+	// Keyboard setup \\
+	//                \\
+
+	int kbfd = open(kb_path, O_RDONLY);
+	if (kbfd == -1) fail("couldn't open keyboard device");
+
+	int kb_oldf = fcntl(kbfd, F_GETFL);
+	if (kb_oldf == -1) fail("couldn't get file flags of keyboard device");
+
+	if (fcntl(kbfd, F_SETFL, mice_oldf | O_NONBLOCK) == -1) fail("couldn't set file flags of keyboard device");
+
+	double c_major[7] = { C, D, E, F, G, A, B };
+
+	int kbspn = SAMPLE_RATE*4; //4 seconds per note
+	int16_t *kbpbbuf = calloc(GET_PIECE_BUF_SIZE(1, kbspn), sizeof (int16_t));
+
+	struct audio_context kbpbctx = (struct audio_context) {
+		.fd = audfd,
+		.max_playback = 16384,
+		.return_back = kbpbbuf,
+		.buf = kbpbbuf,
+		.nframes_left = GET_PIECE_BUF_FRAMES(1, kbspn)
+	};
+
+	//      \\
+	// Loop \\
+	//      \\
 
 	struct mouse_data prev_mdata;
 	while (1) {
 		audio_play_context(&pbctx);
+
+		struct kbevent *kbev = process_kbevents(kbfd);
+		while (kbev) {
+			if (kbev->key >= 16 && kbev->key <= 27) {
+				int p = kbev->key - 16;
+				int idx = p % 7;
+				int mult = 1 << (p / 7);
+
+				double kbnotes[1] = { c_major[idx] * mult };
+				switch (kbev->type) {
+				case 1: //press
+					compile(kbnotes, 1, kbpbbuf, kbspn);
+					break;
+				case 0: //release
+					//ugly hack
+					kbnotes[0] = -kbnotes[0];
+					compile(kbnotes, 1, kbpbbuf, kbspn);
+				}
+			}
+			kbev = kbev->next;
+		}
+
+		if (pbctx.nframes_left <= 0) audio_play_context(&kbpbctx);
 
 		empty(fbdata, tmpbuf, (struct color) {
 			.r = 0,

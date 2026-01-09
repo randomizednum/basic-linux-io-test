@@ -1,10 +1,12 @@
-A program utilizing primitive methods of input and output in the Linux kernel. mousedev (provides a PS/2 mouse-compatible device), fbdev (provides primitive displaying options) and ALSA (the sound subsytem) are currently used.
+A program utilizing primitive methods of input and output in the Linux kernel. Parts of the Linux input subsystem including mousedev (provides a PS/2 mouse-compatible device) and evdev (provides, among other things, an interface to receive keyboard input), along with output mechanisms like fbdev (provides primitive displaying options) and ALSA (the sound subsytem) are currently used.
 
 Compile with
 
 	cc *.c -lm
 
 Note that this is a demonstration (intended to provide an example of how one can interact with the Linux kernel directly for I/O), not a collection of utilities or libraries. For example, the framebuffer handling is naive and inefficient, there is a trivial way mouse handling can enter an infinite loop, and the part utilizing ALSA is a complete mess in general.
+
+The program itself is not much; it draws lines on the framebuffer, plays a short tune, displays a representation of the mouse delta and reacts to keyboard inputs from the top row. For command line options, see main.c.
 
 Useful sources:
 
@@ -23,6 +25,9 @@ https://www.kernel.org/doc/html/latest/sound/kernel-api/alsa-driver-api.html
 Other stuff related to sound:
 https://mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
 
+Keyboard input:
+https://kernel.org/doc/html/latest/input/event-codes.html
+
 TODO list:
-* A way to receive inputs from keyboard (stdin doesn't suffice)
+* Cleanup
 * Better understanding of ALSA
