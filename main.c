@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
 					compile(kbnotes, 1, kbpbbuf, kbspn);
 					break;
 				case 0: //release
-					//ugly hack
+					//ugly hack (this is why it is possible to hear a high frequency hiss after playing for some time)
 					kbnotes[0] = -kbnotes[0];
 					compile(kbnotes, 1, kbpbbuf, kbspn);
 				}
