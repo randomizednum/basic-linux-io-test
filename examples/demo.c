@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
 	int kb_oldf = fcntl(kbfd, F_GETFL);
 	if (kb_oldf == -1) fail("couldn't get file flags of keyboard device");
 
-	if (fcntl(kbfd, F_SETFL, mice_oldf | O_NONBLOCK) == -1) fail("couldn't set file flags of keyboard device");
+	if (fcntl(kbfd, F_SETFL, kb_oldf | O_NONBLOCK) == -1) fail("couldn't set file flags of keyboard device");
 
 	double c_major[7] = { C, D, E, F, G, A, B };
 

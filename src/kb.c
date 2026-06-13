@@ -46,3 +46,9 @@ struct kbevent *process_kbevents(int fd) {
 
 	return event;
 }
+
+void dealloc_kbevents(struct kbevent *ev) {
+	if (!ev) return;
+	dealloc_kbevents(ev->next);
+	free(ev);
+}

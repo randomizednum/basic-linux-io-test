@@ -16,5 +16,6 @@ struct kbevent {
 };
 
 struct kbevent *process_kbevents(int kbfd);
+void dealloc_kbevents(struct kbevent *ev);
 
 #endif
