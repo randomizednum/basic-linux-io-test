@@ -16,25 +16,52 @@
 #include "kb.h"
 
 #define FLOAT double
+#define COLORFULNESS 0
 
 static inline void fail(const char *msg) {
 	fprintf(stderr, "%s: %d\n", msg, errno);
 	exit(1);
 }
 
-static inline int get_color(FLOAT _Complex point, int const it_count) {
+//r -> rg
+//rg -> g
+//g -> gb
+//gb -> b
+//b -> rb
+//rb -> r
+static inline struct color degree_to_color(double d_init) {
+#if COLORFULNESS > 0
+	int r, g, b;
+
+	double d = fmod(d_init * COLORFULNESS, 1);
+
+	if (d * 6 < 1) r = 255, g = (d*6) * 256, b = 0;
+	else if (d * 6 < 2) r = 255 - (int) ((d*6-1) * 256), g = 255, b = 0;
+	else if (d * 6 < 3) r = 0, g = 255, b = (d*6-2) * 256;
+	else if (d * 6 < 4) r = 0, g = 255 - (int) ((d*6-3) * 256), b = 255;
+	else if (d * 6 < 5) r = (d*6-4) * 256, g = 0, b = 255;
+	else r = 255, g = 0, b = 255 - (int) ((d*6-5) * 256);
+
+	return (struct color) { .a = 0, .r = r, .g = g, .b = b };
+#else
+	int c = d_init * 256;
+	return (struct color) { .a = 0, .r = c, .g = c, .b = c};
+#endif
+}
+
+static inline struct color get_color(FLOAT _Complex point, int const it_count) {
 	FLOAT _Complex z = 0;
 	for (int i = 0; i < it_count; ++i) {
 		FLOAT re = creal(z), im = cimag(z);
 
 		if (re*re + im*im > 4) {
-			return 4 * (1.0/4 - 1.0/(4 + i)) * 256;
+			return degree_to_color(4 * (1.0/4 - 1.0/(4 + i)));
 		}
 
 		z = z*z + point;
 	}
 
-	return 0;
+	return (struct color) { .a = 0, .r = 0, .g = 0, .b = 0 };
 }
 
 int main(int argc, char **argv) {
@@ -67,14 +94,8 @@ int main(int argc, char **argv) {
 			FLOAT x = (sx - (int) fbdata.w / 2) * upp + c_re;
 			FLOAT y = (sy - (int) fbdata.h / 2) * upp + c_im;
 
-			int color_n = get_color(CMPLX(x, y), it_count);
+			struct color c = get_color(CMPLX(x, y), it_count);
 
-			struct color c = {
-				.a = 0,
-				.r = color_n,
-				.g = color_n,
-				.b = color_n
-			};
 			draw_point(fbdata, fbmem, (struct fb_pos) { .x = sx, .y = sy }, c);
 		}
 	}
