@@ -6,7 +6,7 @@ Compile with
 
 Note that this is a demonstration (intended to provide an example of how one can interact with the Linux kernel directly for I/O), not a collection of utilities or libraries. For example, the framebuffer handling is naive and inefficient, there is a trivial way mouse handling can enter an infinite loop, and the part utilizing ALSA is a complete mess in general.
 
-The program itself is not much; it draws lines on the framebuffer, plays a short tune, displays a representation of the mouse delta and reacts to keyboard inputs from the top row. For command line options, see main.c.
+The program itself is not much; it draws lines on the framebuffer, plays a short tune, displays a representation of the mouse delta and reacts to keyboard inputs from the top row. For command line options, see examples/demo.c.
 
 Useful sources:
 

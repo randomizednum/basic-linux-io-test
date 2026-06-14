@@ -15,15 +15,17 @@
 #include "framebuf.h"
 #include "kb.h"
 
+#define FLOAT double
+
 static inline void fail(const char *msg) {
 	fprintf(stderr, "%s: %d\n", msg, errno);
 	exit(1);
 }
 
-static inline int get_color(double _Complex point, int const it_count) {
-	double _Complex z = 0;
+static inline int get_color(FLOAT _Complex point, int const it_count) {
+	FLOAT _Complex z = 0;
 	for (int i = 0; i < it_count; ++i) {
-		double re = creal(z), im = cimag(z);
+		FLOAT re = creal(z), im = cimag(z);
 
 		if (re*re + im*im > 4) {
 			return 4 * (1.0/4 - 1.0/(4 + i)) * 256;
@@ -40,11 +42,15 @@ int main(int argc, char **argv) {
 	if (fbfd == -1) fail("couldn't open fb0");
 
 	int it_count = 100;
-	double upp = 0.002; //units per pixel
+	FLOAT upp = 0.002; //units per pixel
+	FLOAT c_re = 0, c_im = 0;
 
 	for (int i = 1; i < argc - 1; ++i) {
 		char *arg = argv[i];
 		if (strcmp(arg, "--iterations") == 0) it_count = atoi(argv[++i]);
+		else if (strcmp(arg, "--units-per-pixel") == 0) upp = atof(argv[++i]);
+		else if (strcmp(arg, "--center-re") == 0) c_re = atof(argv[++i]);
+		else if (strcmp(arg, "--center-im") == 0) c_im = atof(argv[++i]);
 	}
 
 	struct fb_fix_screeninfo fixscinfo;
@@ -58,8 +64,8 @@ int main(int argc, char **argv) {
 
 	for (int sy = 0; sy < fbdata.h; ++sy) {
 		for (int sx = 0; sx < fbdata.w; ++sx) {
-			double x = (sx - (int) fbdata.w / 2) * upp;
-			double y = (sy - (int) fbdata.h / 2) * upp;
+			FLOAT x = (sx - (int) fbdata.w / 2) * upp + c_re;
+			FLOAT y = (sy - (int) fbdata.h / 2) * upp + c_im;
 
 			int color_n = get_color(CMPLX(x, y), it_count);
 
